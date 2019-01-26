@@ -1,11 +1,14 @@
 import PyPDF2
-
+        
 
 class Document():
     """Represents a document entry."""
-    def __init__(self, file, path, start = 1, end = file.numPages):
+    def __init__(self, file = None):
         super().__init__()
-        self.pdf = PyPDF2.PdfFileReader(file)
-        self.path = path
-        self.start = start
-        self.end = end
+        self.path = ""
+        self.start = 1
+        self.end = 1
+        if file is not None:
+            self.path = file
+            self.pdf = PyPDF2.PdfFileReader(open(file, 'rb'))
+            self.end = self.pdf.numPages

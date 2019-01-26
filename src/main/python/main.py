@@ -5,17 +5,20 @@ from PyQt5.QtCore import *
 import PyPDF2, sys
 
 
+import document as doc
+
+
 class DocumentTableModel(QAbstractTableModel):
-    def __init__(self, parent = None):
-        super().__init__(self, parent)
-        self.__documents = []
-        self.__headers = ['File', 'Start', 'End']
+    def __init__(self, document_list, parent = None):
+        QAbstractTableModel.__init__(self, parent)
+        self.documents = document_list
+        self.headers = ['File', 'Start', 'End']
 
     def rowCount(self, parent):
-        return len(self.__documents)
+        return len(self.documents)
 
     def columnCount(self, parent):
-        return 3
+        return len(self.headers)
 
     def flags(self, index):
         row = index.row()
@@ -27,39 +30,39 @@ class DocumentTableModel(QAbstractTableModel):
 
     def data(self, index, role):
         row = index.row()
-        column = index.column()
+        col = index.column()
 
         if role == Qt.EditRole:
             if col == 1:
-                return self.__documents[row].start
-            else if col == 2:
-                return self.__documents[row].end
+                return self.documents[row].start
+            elif col == 2:
+                return self.documents[row].end
 
         if role == Qt.DisplayRole:
             if col == 0:
-                return self.__documents[row].path
-            else if col == 1:
-                return self.__documents[row].start
-            else if col == 2:
-                return self.__documents[row].end
+                return self.documents[row].path
+            elif col == 1:
+                return self.documents[row].start
+            elif col == 2:
+                return self.documents[row].end
 
     def setData(self, index, value, role = Qt.EditRole):
         if role == Qt.EditRole:
             row = index.row()
-            column = index.column()
-            max_value = self.__documents[row].pdf.numPages
-            old_start = self.__documents[row].start
-            old_end = self.__documents[row].end
+            col = index.column()
+            max_value = self.documents[row].pdf.numPages
+            old_start = self.documents[row].start
+            old_end = self.documents[row].end
 
             try:
                 new_value = int(value)
                 if col == 1 and new_value > 0 and new_value <= old_end:
-                    self.__documents[row].start = new_value
+                    self.documents[row].start = new_value
                     self.dataChanged.emit(index, index)
                     return True
-                else if col == 2 and new_value >= old_start
-                        and new_value <= max_value:
-                    self.__documents[row].end = new_value
+                elif (col == 2 and new_value >= old_start
+                        and new_value <= max_value):
+                    self.documents[row].end = new_value
                     self.dataChanged.emit(index, index)
                     return True
             except TypeError:
@@ -69,20 +72,31 @@ class DocumentTableModel(QAbstractTableModel):
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
-                if section < len(self.__headers):
-                    return self.__headers[section]
+                if section < len(self.headers):
+                    return self.headers[section]
                 else:
                     return "Not implemented"
 
-    def insertRows(self, position, rows, parent = QModelIndex()):
-        self.beginInsertRows(parent, position, position + rows - 1)
-        for i in range(rows):
-            filler = [Document(open('temp.pdf', 'rb'))
-                      for i in range(self.columnCount(None))]
-            self.__documents.insert(position, filler)
+    def insertRows(self, row, count, parent = QModelIndex()):
+        self.beginInsertRows(parent, row, row + count - 1)
+        for i in range(count):
+            self.documents.insert(row, Document())
         self.endInsertRows()
         
         return True
+
+    def removeRows(self, row, count, parent = QModelIndex()):
+        self.beginRemoveRows(parent, row, row + count - 1);
+        for i in range(count):
+            self.documents.pop(row)
+        self.endRemoveRows()
+
+        return True
+
+    def addDocument(self, document):
+        self.layoutAboutToBeChanged.emit()
+        self.documents.append(document)
+        self.layoutChanged.emit()
 
 
 class PDFMergerWindow(QMainWindow):
@@ -91,21 +105,20 @@ class PDFMergerWindow(QMainWindow):
         self.initUI()
 
     def initUI(self):
+        self.docs = []
         self.table = QTableView(self)
-        #self.model = DocumentTableModel()
-        #self.table.setModel(self.model)
+        self.model = DocumentTableModel(self.docs)
+        self.table.setModel(self.model)
 
-        """
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        """
 
         self.setCentralWidget(self.table)
 
         self.add_action = QAction('Add', self)
-        #self.add_action.triggered.connect(self.addFile)
+        self.add_action.triggered.connect(self.addFile)
 
         self.clear_action = QAction('Clear', self)
         #self.clear_action.triggered.connect(self.removeAll)
@@ -141,15 +154,14 @@ class PDFMergerWindow(QMainWindow):
 
     def addFile(self):
         file_dialog = QFileDialog()
-        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
         fname = file_dialog.getOpenFileName(
                 self, caption = 'Open file', filter = '*.pdf')
 
         if fname[0]:
-            pdf = Document(
-                    file = open(fname[0], 'rb'),
-                    path = os.path.abspath(fname[0]))
-            #something
+            pathname = os.path.abspath(fname[0])
+            pdf = doc.Document(pathname)
+            self.model.addDocument(pdf)
 
 
 class AppContext(ApplicationContext):           # 1. Subclass ApplicationContext
