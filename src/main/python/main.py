@@ -93,11 +93,6 @@ class DocumentTableModel(QAbstractTableModel):
 
         return True
 
-    def addDocument(self, document):
-        self.layoutAboutToBeChanged.emit()
-        self.documents.append(document)
-        self.layoutChanged.emit()
-
 
 class PDFMergerWindow(QMainWindow):
     def __init__(self):
@@ -106,8 +101,9 @@ class PDFMergerWindow(QMainWindow):
 
     def initUI(self):
         self.docs = []
-        self.table = QTableView(self)
         self.model = DocumentTableModel(self.docs)
+
+        self.table = QTableView(self)
         self.table.setModel(self.model)
         self.table.setSelectionMode(
             QAbstractItemView.SelectionMode.SingleSelection)
@@ -118,7 +114,7 @@ class PDFMergerWindow(QMainWindow):
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
 
         self.selection = self.table.selectionModel()
-        self.selection.currentChanged.connect(self.toggle_moving)
+        self.selection.currentChanged.connect(self.toggle_buttons)
 
         self.setCentralWidget(self.table)
 
@@ -129,9 +125,11 @@ class PDFMergerWindow(QMainWindow):
         self.clear_action.triggered.connect(self.remove_all)
 
         self.duplicate_action = QAction('Duplicate', self)
+        self.duplicate_action.setEnabled(False)
         self.duplicate_action.triggered.connect(self.duplicate)
 
         self.remove_action = QAction('Remove', self)
+        self.remove_action.setEnabled(False)
         self.remove_action.triggered.connect(self.remove)
 
         self.move_up_action = QAction('Move Up', self)
@@ -143,7 +141,8 @@ class PDFMergerWindow(QMainWindow):
         self.move_down_action.triggered.connect(self.move_down)
 
         self.merge_action = QAction('Merge', self)
-        #self.merge_action.triggered.connect(self.merge)
+        self.merge_action.setEnabled(False)
+        self.merge_action.triggered.connect(self.merge)
 
         toolbar = self.addToolBar('Main')
         toolbar.setMovable(False)
@@ -164,15 +163,27 @@ class PDFMergerWindow(QMainWindow):
             self.selection.currentIndex().siblingAtRow(index),
             QItemSelectionModel.SelectionFlag.ClearAndSelect)
 
-    def toggle_moving(self):
+    def toggle_buttons(self):
         current = self.selection.currentIndex().row()
+
+        self.duplicate_action.setEnabled(False)
+        self.remove_action.setEnabled(False)
         self.move_up_action.setEnabled(False)
         self.move_down_action.setEnabled(False)
+
         if current != -1:
+            self.duplicate_action.setEnabled(True)
+            self.remove_action.setEnabled(True)
+
             if current != 0:
                 self.move_up_action.setEnabled(True)
             if current != len(self.docs) - 1:
                 self.move_down_action.setEnabled(True)
+
+        if len(self.docs) > 0:
+            self.merge_action.setEnabled(True)
+        else:
+            self.merge_action.setEnabled(False)
 
     def add_file(self):
         file_dialog = QFileDialog()
@@ -182,15 +193,22 @@ class PDFMergerWindow(QMainWindow):
 
         for file in to_open[0]:
             pdf = doc.Document(file)
-            self.model.addDocument(pdf)
+            self.model.layoutAboutToBeChanged.emit()
+            self.docs.append(pdf)
+            self.model.layoutChanged.emit()
 
     def remove(self):
         current = self.selection.currentIndex().row()
-        self.model.removeRows(current, 1)
+        self.model.layoutAboutToBeChanged.emit()
+        self.docs.pop(current)
+        self.model.layoutChanged.emit()
         self.selection.clear()
 
     def remove_all(self):
-        self.model.removeRows(0, len(self.docs))
+        self.model.layoutAboutToBeChanged.emit()
+        self.docs.clear()
+        self.model.layoutChanged.emit()
+        self.selection.clear()
 
     def duplicate(self):
         current = self.selection.currentIndex().row()
@@ -213,6 +231,28 @@ class PDFMergerWindow(QMainWindow):
         current = self.selection.currentIndex().row()
         self.swap(current, current + 1)
         self.change_selection(current + 1)
+
+    def merge(self):
+        if len(self.docs) > 0:
+            writer = PyPDF2.PdfFileWriter()
+
+            for document in self.docs:
+                start = document.start - 1
+                end = document.end
+                for i in range(start, end):
+                    page = document.pdf.getPage(i)
+                    writer.addPage(page)
+
+            file_dialog = QFileDialog()
+            file_dialog.setFileMode(QFileDialog.FileMode.AnyFile)
+            file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+            to_save = file_dialog.getSaveFileName(
+                    self, caption = 'Save file', filter = '*.pdf')
+
+            if to_save[0]:
+                output = open(to_save[0], 'wb')
+                writer.write(output)
+                output.close()
 
 
 class AppContext(ApplicationContext):           # 1. Subclass ApplicationContext
