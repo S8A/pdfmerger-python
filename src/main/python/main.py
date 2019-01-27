@@ -80,7 +80,7 @@ class DocumentTableModel(QAbstractTableModel):
     def insertRows(self, row, count, parent = QModelIndex()):
         self.beginInsertRows(parent, row, row + count - 1)
         for i in range(count):
-            self.documents.insert(row, Document())
+            self.documents.insert(row, doc.Document())
         self.endInsertRows()
         
         return True
@@ -121,10 +121,10 @@ class PDFMergerWindow(QMainWindow):
         self.add_action.triggered.connect(self.addFile)
 
         self.clear_action = QAction('Clear', self)
-        #self.clear_action.triggered.connect(self.removeAll)
+        self.clear_action.triggered.connect(self.removeAll)
 
         self.duplicate_action = QAction('Duplicate', self)
-        #self.duplicate_action.triggered.connect(self.duplicate)
+        self.duplicate_action.triggered.connect(self.duplicate)
 
         self.remove_action = QAction('Remove', self)
         self.remove_action.triggered.connect(self.remove)
@@ -165,6 +165,17 @@ class PDFMergerWindow(QMainWindow):
     def remove(self):
         current = self.table.selectionModel().currentIndex().row()
         self.model.removeRows(current, 1)
+
+    def removeAll(self):
+        self.model.removeRows(0, len(self.docs))
+
+    def duplicate(self):
+        current = self.table.selectionModel().currentIndex().row()
+        self.model.insertRows(current + 1, 1)
+        copy = doc.Document(self.docs[current].path)
+        copy.start = self.docs[current].start
+        copy.end = self.docs[current].end
+        self.docs[current + 1] = copy
 
 
 class AppContext(ApplicationContext):           # 1. Subclass ApplicationContext
