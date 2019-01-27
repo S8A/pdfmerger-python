@@ -127,7 +127,7 @@ class PDFMergerWindow(QMainWindow):
         #self.duplicate_action.triggered.connect(self.duplicate)
 
         self.remove_action = QAction('Remove', self)
-        #self.remove_action.triggered.connect(self.remove)
+        self.remove_action.triggered.connect(self.remove)
 
         self.move_up_action = QAction('Move Up', self)
         #self.move_up_action.triggered.connect(self.move_up)
@@ -159,9 +159,12 @@ class PDFMergerWindow(QMainWindow):
                 self, caption = 'Open file', filter = '*.pdf')
 
         if fname[0]:
-            pathname = os.path.abspath(fname[0])
-            pdf = doc.Document(pathname)
+            pdf = doc.Document(fname[0])
             self.model.addDocument(pdf)
+
+    def remove(self):
+        current = self.table.selectionModel().currentIndex().row()
+        self.model.removeRows(current, 1)
 
 
 class AppContext(ApplicationContext):           # 1. Subclass ApplicationContext
