@@ -109,19 +109,24 @@ class PDFMergerWindow(QMainWindow):
         self.table = QTableView(self)
         self.model = DocumentTableModel(self.docs)
         self.table.setModel(self.model)
+        self.table.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection)
 
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
 
+        self.selection = self.table.selectionModel()
+        self.selection.currentChanged.connect(self.toggle_moving)
+
         self.setCentralWidget(self.table)
 
         self.add_action = QAction('Add', self)
-        self.add_action.triggered.connect(self.addFile)
+        self.add_action.triggered.connect(self.add_file)
 
         self.clear_action = QAction('Clear', self)
-        self.clear_action.triggered.connect(self.removeAll)
+        self.clear_action.triggered.connect(self.remove_all)
 
         self.duplicate_action = QAction('Duplicate', self)
         self.duplicate_action.triggered.connect(self.duplicate)
@@ -130,10 +135,12 @@ class PDFMergerWindow(QMainWindow):
         self.remove_action.triggered.connect(self.remove)
 
         self.move_up_action = QAction('Move Up', self)
-        #self.move_up_action.triggered.connect(self.move_up)
+        self.move_up_action.setEnabled(False)
+        self.move_up_action.triggered.connect(self.move_up)
 
         self.move_down_action = QAction('Move Down', self)
-        #self.move_down_action.triggered.connect(self.move_down)
+        self.move_down_action.setEnabled(False)
+        self.move_down_action.triggered.connect(self.move_down)
 
         self.merge_action = QAction('Merge', self)
         #self.merge_action.triggered.connect(self.merge)
@@ -152,30 +159,60 @@ class PDFMergerWindow(QMainWindow):
         toolbar.addSeparator()
         toolbar.addAction(self.merge_action)
 
-    def addFile(self):
+    def change_selection(self, index):
+        self.selection.setCurrentIndex(
+            self.selection.currentIndex().siblingAtRow(index),
+            QItemSelectionModel.SelectionFlag.ClearAndSelect)
+
+    def toggle_moving(self):
+        current = self.selection.currentIndex().row()
+        self.move_up_action.setEnabled(False)
+        self.move_down_action.setEnabled(False)
+        if current != -1:
+            if current != 0:
+                self.move_up_action.setEnabled(True)
+            if current != len(self.docs) - 1:
+                self.move_down_action.setEnabled(True)
+
+    def add_file(self):
         file_dialog = QFileDialog()
-        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-        fname = file_dialog.getOpenFileName(
+        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+        to_open = file_dialog.getOpenFileNames(
                 self, caption = 'Open file', filter = '*.pdf')
 
-        if fname[0]:
-            pdf = doc.Document(fname[0])
+        for file in to_open[0]:
+            pdf = doc.Document(file)
             self.model.addDocument(pdf)
 
     def remove(self):
-        current = self.table.selectionModel().currentIndex().row()
+        current = self.selection.currentIndex().row()
         self.model.removeRows(current, 1)
+        self.selection.clear()
 
-    def removeAll(self):
+    def remove_all(self):
         self.model.removeRows(0, len(self.docs))
 
     def duplicate(self):
-        current = self.table.selectionModel().currentIndex().row()
+        current = self.selection.currentIndex().row()
         self.model.insertRows(current + 1, 1)
         copy = doc.Document(self.docs[current].path)
-        copy.start = self.docs[current].start
-        copy.end = self.docs[current].end
+        copy.set_interval(self.docs[current].start, self.docs[current].end)
         self.docs[current + 1] = copy
+
+    def swap(self, i, j):
+        self.model.layoutAboutToBeChanged.emit()
+        self.docs[i], self.docs[j] = self.docs[j], self.docs[i]
+        self.model.layoutChanged.emit()
+
+    def move_up(self):
+        current = self.selection.currentIndex().row()
+        self.swap(current - 1, current)
+        self.change_selection(current - 1)
+
+    def move_down(self):
+        current = self.selection.currentIndex().row()
+        self.swap(current, current + 1)
+        self.change_selection(current + 1)
 
 
 class AppContext(ApplicationContext):           # 1. Subclass ApplicationContext
