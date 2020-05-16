@@ -1,11 +1,7 @@
-from fbs_runtime.application_context import ApplicationContext
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-
 import PyPDF2, sys
-
-
-import document as doc
+from . import document as doc
 
 
 class DocumentTableModel(QAbstractTableModel):
@@ -255,17 +251,11 @@ class PDFMergerWindow(QMainWindow):
                 output.close()
 
 
-class AppContext(ApplicationContext):           # 1. Subclass ApplicationContext
-    def run(self):                              # 2. Implement run()
-        window = PDFMergerWindow()
-        version = self.build_settings['version']
-        window.setWindowTitle("PDFMerger v" + version)
-        window.resize(600, 400)
-        window.show()
-        return self.app.exec_()                 # 3. End run() with this line
-
-
 if __name__ == '__main__':
-    appctxt = AppContext()                      # 4. Instantiate the subclass
-    exit_code = appctxt.run()                   # 5. Invoke run()
-    sys.exit(exit_code)
+    app = QApplication(sys.argv)
+    window = PDFMergerWindow()
+    window.setWindowTitle("PDFMerger")
+    window.resize(600, 400)
+    window.show()
+    sys.exit(app.exec())
+
