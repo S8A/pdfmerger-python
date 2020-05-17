@@ -1,6 +1,9 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-import PyPDF2, sys
+from PyQt5.QtGui import QIcon
+import PyPDF2
+import os
+import sys
 from .document import Document
 
 
@@ -267,8 +270,15 @@ class PDFMergerWindow(QMainWindow):
 
 def main(args):
     """Creates and shows the main window of the application."""
+    # Create application and main window
     app = QApplication(args)
     window = PDFMergerWindow()
+    # Window icon
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    separator = os.path.sep
+    icon_dir = separator.join([script_dir, 'resources', 'pdfmerger.png'])
+    window.setWindowIcon(QIcon(icon_dir))
+    # Show window and execute application
     window.show()
     sys.exit(app.exec())
 
