@@ -265,13 +265,13 @@ class PDFMergerWindow(QMainWindow):
                     merger.write(file)
 
 
-def main():
+def main(args):
     """Creates and shows the main window of the application."""
-    app = QApplication(sys.argv)
+    app = QApplication(args)
     window = PDFMergerWindow()
     window.show()
     sys.exit(app.exec())
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv)
