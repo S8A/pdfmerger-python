@@ -21,3 +21,6 @@ Run the `pdfmerger` module with Python:
 ```bash
 python3 -m pdfmerger
 ```
+
+## License
+This project is under the terms of the [MIT License](https://choosealicense.com/licenses/mit/)
