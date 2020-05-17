@@ -13,8 +13,8 @@ class Document():
         if file is not None:
             self.path = file
             pdf = PyPDF2.PdfFileReader(open(file, 'rb'))
-            self.num_pages = pdf.numPages
-            self.end = pdf.numPages
+            self.num_pages = pdf.numPages + 0
+            self.end = pdf.numPages + 0
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.path})"
