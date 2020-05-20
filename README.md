@@ -10,8 +10,8 @@ Tool for merging PDF documents made in Python.
 - [PyPDF2](https://pypi.org/project/PyPDF2/)
 
 
-# Install and use (all platforms)
-Clone this repository with Git and switch to the resulting folder:
+## Install and use (all platforms)
+Clone this repository with Git (or download and extract ZIP file) and switch to the resulting folder:
 ```bash
 git clone https://github.com/S8A/pdfmerger-python.git
 cd pdfmerger-python
